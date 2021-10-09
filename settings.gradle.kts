@@ -27,11 +27,11 @@ listOf("core", "app").forEach { moduleName ->
         }
 
 
-        listOf( "src/main/kotlin/com/movv/",
-            "src/main/java/com/movv/",
+        listOf( "src/main/kotlin/com/ddoeri/",
+            "src/main/java/com/ddoeri/",
             "src/main/resources",
-            "src/test/kotlin/com/movv/",
-            "src/main/java/com/movv/",
+            "src/test/kotlin/com/ddoeri/",
+            "src/main/java/com/ddoeri/",
             "src/test/resources")
             .forEach {srcDir->
                 val srcFolder = File(subDir.absolutePath, srcDir)
