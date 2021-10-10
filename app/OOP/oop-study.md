@@ -105,3 +105,254 @@
 
 - 캡슐화 : 기능의 구현을 외부에 감춤
 - 캡슐화를 통해 기능을 사용하는 코드에 영향을 주지 않고 내부구현을 변경할 수 있는 유연함
+
+# 캡슐화 예제 1
+
+```java
+public AuthResult authenticate(String id, String pw){
+	Member mem = findOne(id);
+	if (mem == null) return AuthResult.NO_MATCH;
+
+	if( mem.getVerificationEmailStatus() != 2){
+		return AuthResult.NO_EMAIL_VERIFIED;
+	}
+	if(passwordEncoder.isPasswordValid(mem.getPassword(),pw, mem.getId()){
+		return AuthResult.SUCCESS;
+	}
+	return AuthResult.NO_MATCH;
+}
+```
+
+위와 같은 코드를 캡슐화 해보자
+
+우리는 2가지 방법론을 알고있다. 이는 Tell,Don't Ask 와  Demeter's Law이다.
+
+위의 코드를 보면 2번째 조건문에서 mem 객체의 값을 불러와 비교 하여 확인함을 알수 있다.
+
+이는 Don's ask에 위배 되는 규칙이라고 볼수있다. 그렇기 때문에 이를 mem 객체의 메소드로 캡슐화 가능하다.
+
+```java
+public AuthResult authenticate(String id, String pw){
+	Member mem = findOne(id);
+	if (mem == null) return AuthResult.NO_MATCH;
+
+	if( !mem.isVerifiedEmail() ){
+		return AuthResult.NO_EMAIL_VERIFIED;
+	}
+	if(passwordEncoder.isPasswordValid(mem.getPassword(),pw, mem.getId()){
+		return AuthResult.SUCCESS;
+	}
+	return AuthResult.NO_MATCH;
+}
+
+///////
+
+public class Member{
+	private int verificationEmailStatus;
+
+	public boolean isEmailVerified(){
+		return verficationEmailStatus == 2;
+	}
+...
+}
+```
+
+# 캡슐화 예제 2
+
+```java
+public class Rental{
+	private Movie movie;
+	private int daysRented;
+	
+	public int getFrequentRenterPoint(){
+		if( movie.getPriceCode() == Movie.MEW_RELEASE && daysRented > 1)
+			return 2;
+		else 
+			return 1;
+....
+
+/////////////
+
+public class Movie { 
+
+	public static int REGULAR = 0;
+	public static int NEW_RELEASE = 1;
+	private int priceCode;
+
+	public int getPriceCode() {
+		return priceCode;
+	}
+	....
+}
+```
+
+위의 두 클래스를 확인하자
+
+getFrequentRenterPoint()는 movie에서 특정 코드를 불러와 확인하고 daysRented라는 조건을 만족해야 특정 값을 리턴한다.
+
+movie에서 특정값을 불러온다는것은 dont's ask를 위배하는 행위이다. 그러므로 이를 movie로 바꿔보자
+
+특정 메소드로 바꾼다 하더라도 결국 또 movie에서 생성한 특정 메소드를 불러와야 함은 동일하다.
+
+그렇기 때문에 daysRented 변수를 파라미터화 하여 하나의 메소드로 통일시키도록 하자
+
+```java
+public class Rental{
+	private Movie movie;
+	private int daysRented;
+	
+	public int getFrequentRenterPoint(){
+		return  movie.getFrequentRenterPoint(daysRented);
+	}
+....
+
+/////////////
+
+public class Movie { 
+
+	public static int REGULAR = 0;
+	public static int NEW_RELEASE = 1;
+	private int priceCode;
+
+	public int getPriceCode() {
+		return priceCode;
+	}
+
+	public int getFrequentRenterPoint(int daysRented){
+			if( this.isValidPriceCode && daysRented > 1)
+		//if( this.priceCode && daysRented > 1)
+			return 2;
+		else 
+			return 1;
+	}
+
+	private boolean isVaalidPriceCode(){
+		movie.getPriceCode() == Movie.MEW_RELEASE 
+	}
+
+	....
+}
+```
+
+# 캡슐화 예제 3
+
+```java
+
+Timer t = new Timer();
+t.startTime = System.currentTimeMillis();
+
+...
+
+t.stopTime = System.currnetTimeMillis();
+long elaspedTime = t.stopTime - t.startTime;
+....
+
+/////////////
+
+public class Movie { 
+	
+	public long startTime;
+	public long stopTime;
+	....
+}
+```
+
+위의 두 클래스를 확인하자
+
+start, stop의 기능을 통해서 특정 시간을 알고 싶은 기능이다dlek.
+
+시간을 구하는 코드들을 보면 Timer()를 공통적으로 사용함을 알수있다.
+
+여기서 Millis의 시간뿐만 아니라 nano 시간, 초단위 등등을 알고 싶다면 추가적인 코드를 작성해야한다.
+
+demeter 법칙을 통해 하나의 메소드로 만들면 캡슐화가 잘 진행 될것이라고 생각한다.
+
+```java
+Timer t = new Timer();
+t.start()
+
+...
+
+t.stop()
+long time = t.calculateTime(MILLISECOND)
+....
+
+/////////////
+
+public class Timer { 
+	
+	private long startTime;
+	private long stopTime;
+
+	public void start(){
+		this.startTime() = System.currentTimeMillis();	
+	}	
+
+	public void stop(){
+		this.stopTime() = System.currentTimeMillis();	
+	}	
+
+	public long calculateTime(TimeUnit unit){
+		switch(unit) {
+			case MILLISECOND:
+				return stopTime - startTime;
+	}
+	....
+}
+```
+
+이와 같이 진행하면 파라미터를 통해서 다양한 조건을 받을수있으므로 객체는 함수구현 코드 변경으로 다양하게 코드를 조작 할수 있게 된다.
+
+# 캡슐화 예제 4
+
+```java
+public void verifyEmail(String token){
+	Member mem = findByToken(token);
+	if(mem == null) throw new BadTokenException();
+	
+	if(mem.getVerificationEmailStatus() == 2) {
+		throw new AlreadyVerifiedException();
+	} else {
+		mem.setVerificationEmailStatus(2);
+	}
+	//
+```
+
+위의 코드는 ask 부분을 통해 2가지 기능을 제공한다.
+
+하나는 새로운 익셉션 생성 기능이고 하나는 데이터 업데이트 기능이다.
+
+이것을 나누기에 적절하지 않다면 캡슐화를 고려 해볼수있다. ask부분이 존재하므로 이를 don't ask하고 동시에demeter가 진행되는것이다.
+
+→ 이때 두 기능을 내포하는 함수명을 작성한다.
+
+```java
+public void verifyEmail(String token){
+	Member mem = findByToken(token);
+	if(mem == null) throw new BadTokenException();
+	
+	mem.verifyEmail();
+////////////
+
+public class Member {
+	private int verificationEmailStatus;
+
+	public boolean isEmailVerified(){
+		return verificationEmailStatus == 2;
+	}
+
+	public void verifyEmail(){
+
+		if(isEmailVerified()) {
+			throw new AlreadyVerifiedException();
+		} else {
+			mem.setVerificationEmailStatus(2);
+		}
+	}
+
+...
+}
+
+```
+
+이와 같이 진행하면 파라미터를 통해서 다양한 조건을 받을수있으므로 객체는 함수구현 코드 변경으로 다양하게 코드를 조작 할수 있게 된다.
